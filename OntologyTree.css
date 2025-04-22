@@ -1,0 +1,469 @@
+#root {
+  width: 95%; /* Aumentei um pouco a largura para melhor aproveitamento do espaço */
+  margin: 1rem auto; /* Centralizei e adicionei margem vertical */
+  padding: 1.5rem; /* Aumentei o padding interno */
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fonte mais moderna e legível */
+  background-color: #f4f6f8; /* Cor de fundo suave para contraste */
+}
+
+.ontology-upload {
+  width: 90%; /* Ajustei a largura para dentro do #root */
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08); /* Sombra mais suave e moderna */
+}
+
+.upload-form {
+  margin-bottom: 2.5rem; /* Aumentei a margem inferior */
+  padding: 2rem; /* Aumentei o padding interno */
+  background: #e9ecef; /* Cor de fundo mais clara */
+  border-radius: 8px;
+  border: 1px solid #ced4da; /* Adicionei uma borda sutil */
+}
+
+.file-input-wrapper {
+  position: relative;
+  margin-bottom: 1.5rem; /* Aumentei a margem inferior */
+}
+
+.file-input {
+  width: 100%;
+  padding: 1rem; /* Aumentei o padding */
+  border: 2px dashed #007bff; /* Cor primária para destaque */
+  border-radius: 8px; /* Bordas mais arredondadas */
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem; /* Aumentei a fonte */
+  color: #495057; /* Cor do texto padrão */
+}
+
+.file-input:hover {
+  background: #d1e7ff; /* Feedback de hover mais claro */
+  border-color: #0056b3;
+}
+
+.upload-button {
+  display: block;
+  width: 100%;
+  padding: 1rem; /* Aumentei o padding */
+  background: #007bff; /* Cor primária */
+  color: white;
+  border: none;
+  border-radius: 8px; /* Bordas mais arredondadas */
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+  font-size: 1.1rem; /* Aumentei a fonte */
+}
+
+.upload-button:hover {
+  background: #0056b3;
+}
+
+.message {
+  padding: 1.2rem; /* Aumentei o padding */
+  margin: 1.5rem 0; /* Aumentei a margem */
+  border-radius: 8px; /* Bordas mais arredondadas */
+  font-weight: 500;
+  font-size: 1rem; /* Aumentei a fonte */
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.ontology-tree {
+  margin-top: 3rem; /* Aumentei a margem superior */
+  padding: 1.5rem; /* Aumentei o padding */
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06); /* Sombra mais suave */
+}
+
+.ontology-tree h3 {
+  color: #343a40; /* Cor do título */
+  margin-bottom: 1.5rem; /* Adicionei margem inferior ao título */
+  font-size: 1.5rem; /* Aumentei a fonte do título */
+  text-align: left; /* Alinhei o título à esquerda */
+}
+
+.ontology-tree ul {
+  padding-left: 20px; /* Aumentei o padding esquerdo da lista */
+  list-style: none; /* Removi os marcadores de lista padrão */
+}
+
+.tree-node {
+  position: relative;
+  padding-left: 30px; /* Aumentei o padding esquerdo para o conteúdo do nó */
+  margin: 10px 0; /* Aumentei a margem vertical entre os nós */
+}
+
+.tree-node::before {
+  content: '';
+  position: absolute;
+  left: 0px; /* Ajustei a posição */
+  top: 10px; /* Ajustei a posição */
+  width: 16px; /* Aumentei o tamanho do círculo */
+  height: 16px; /* Aumentei o tamanho do círculo */
+  border: 2px solid #007bff; /* Cor primária para o círculo */
+  border-radius: 50%;
+  background: #fff;
+}
+
+.tree-node::after {
+  content: '';
+  position: absolute;
+  left: 8px; /* Centralizei a linha vertical */
+  top: 26px; /* Ajustei a posição */
+  bottom: -12px; /* Aumentei o comprimento da linha */
+  width: 2px;
+  background: #adb5bd; /* Cor da linha mais suave */
+}
+
+.tree-node:last-child::after {
+  display: none;
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px; /* Aumentei o padding */
+  background: #f8f9fa;
+  border-radius: 6px; /* Bordas mais suaves */
+  transition: all 0.2s ease;
+  border: 1px solid #e0e0e0; /* Adicionei uma borda sutil aos nós */
+}
+
+.node-content:hover {
+  background: #e9ecef; /* Feedback de hover mais claro */
+  transform: translateX(8px); /* Movimento mais pronunciado no hover */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); /* Adicionei uma leve sombra no hover */
+}
+
+.node-icon {
+  margin-right: 10px; /* Aumentei a margem direita do ícone */
+  color: #007bff; /* Cor primária para os ícones */
+  font-size: 1.2rem; /* Aumentei o tamanho dos ícones */
+}
+
+.node-label {
+  font-family: 'Roboto', sans-serif; /* Fonte mais moderna e limpa */
+  font-weight: 500;
+  color: #343a40; /* Cor do texto do rótulo */
+  font-size: 1rem; /* Aumentei a fonte do rótulo */
+}
+
+.tree-node ul {
+  margin-left: 20px; /* Indentação para os filhos */
+  padding-left: 0;
+}
+
+/* Novas regras CSS */
+.node-content.has-children {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.node-content.has-children:hover {
+  background-color: #e9ecef;
+}
+
+.node-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-icon {
+  display: flex;
+  color: #6c757d;
+  transition: transform 0.2s;
+}
+
+.tree-node::before {
+  left: -8px; /* Ajuste na posição do conector */
+}
+
+/* Ajuste no alinhamento dos ícones */
+.node-icon {
+  margin-right: 0;
+}
+
+/* Ajuste no espaçamento dos nós filhos */
+.tree-node ul {
+  margin-left: 24px;
+}
+
+/* Search Box */
+.search-box {
+  position: relative;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 2.5rem;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Search highlight */
+.search-match {
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+}
+
+mark {
+  background: transparent;
+  color: inherit;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* Tabs */
+.ontology-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.tab-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.tab-btn.active {
+  background: #007bff;
+  color: white;
+}
+
+/* Properties List */
+.properties-container {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.property-card {
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.property-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0.5rem 0;
+  font-size: 0.9em;
+  color: #6c757d;
+}
+
+.subproperties {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #eee;
+  font-size: 0.85em;
+  color: #868e96;
+}
+
+.create-class-actions {
+  margin: 10px 0;
+}
+
+.create-class-btn {
+  padding: 6px 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.create-class-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.class-input, .class-select {
+  padding: 6px 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.submit-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #ccc;
+  color: black;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.export-section {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.export-input {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.export-button {
+  padding: 6px 12px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background-color: #1976D2;
+}
+
+/* Individuals Section */
+.individuals-section {
+  margin-top: 20px;
+}
+
+.create-individual-form {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin: 15px 0;
+  border-radius: 8px;
+}
+
+.properties-inputs {
+  margin: 15px 0;
+}
+
+.property-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.individuals-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.individual-card {
+  border: 1px solid #eee;
+  padding: 15px;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.prop-name {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.prop-values {
+  color: #666;
+}
+
+.relationship-form {
+  margin: 20px 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.relationship-form h4 {
+  margin-bottom: 10px;
+}
+.relationship-form select, .relationship-form input {
+  margin: 5px;
+  padding: 5px;
+}
+.relationship-form button {
+  margin: 10px;
+}
