@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiUpload, FiFile, FiFolder, FiChevronRight, FiChevronDown, FiSearch, FiGrid, FiList, FiTag, FiUser } from 'react-icons/fi';
@@ -20,7 +21,20 @@ const OntologyUpload = () => {
   const [newIndividualName, setNewIndividualName] = useState('');
   const [selectedIndividualClasses, setSelectedIndividualClasses] = useState([]);
   const [individualProperties, setIndividualProperties] = useState([]);
-
+  const [newObjPropName, setNewObjPropName] = useState('');
+  const [objDomain, setObjDomain] = useState([]);
+  const [objRange, setObjRange] = useState([]);
+  const [showCreateAnnoPropForm, setShowCreateAnnoPropForm] = useState(false);
+  const [newAnnoPropName, setNewAnnoPropName] = useState('');
+  const [annoDomain, setAnnoDomain] = useState([]);
+  const [individualAnnotations, setIndividualAnnotations] = useState([]);
+  const [objCharacteristics, setObjCharacteristics] = useState([]);
+  const [objInverseOf, setObjInverseOf] = useState('');
+  const [objSubProperties, setObjSubProperties] = useState([]);
+  const [objEquivalents, setObjEquivalents] = useState([]);
+  const [objDisjoints, setObjDisjoints] = useState([]);
+  // New state for object property form
+  const [showObjectPropertyForm, setShowObjectPropertyForm] = useState(false);
 
   const handleExportOntology = () => {
     if (!ontologyData) {
@@ -106,11 +120,17 @@ const OntologyUpload = () => {
           return acc;
         }, {});
   
-      const response = await axios.post('http://localhost:8000/create-individual/', {
-        name: newIndividualName,
-        classes: selectedIndividualClasses,
-        properties: propertiesDict
-      });
+        const response = await axios.post('http://localhost:8000/create-individual/', {
+          name: newIndividualName,
+          classes: selectedIndividualClasses,
+          properties: propertiesDict,
+          annotations: individualAnnotations.reduce((acc, a) => {
+            if (!acc[a.name]) acc[a.name] = [];
+            acc[a.name].push(a.value);
+            return acc;
+          }, {}),
+          object_properties: {}   
+        });
   
       if (response.data.status === 'success') {
         setOntologyData(prev => ({
@@ -198,28 +218,6 @@ const OntologyUpload = () => {
     }
   };
 
-
-  const PropertiesList = ({ properties, type }) => {
-    return (
-      <div className="properties-container">
-        {properties.map(prop => (
-          <div key={prop.name} className="property-card">
-            <h4>{prop.name}</h4>
-            <div className="property-meta">
-              <span>Domain: {prop.domain.join(', ') || 'any'}</span>
-              <span>Range: {prop.range.join(', ') || (type === 'object' ? 'Thing' : 'data')}</span>
-            </div>
-            {prop.subproperties.length > 0 && (
-              <div className="subproperties">
-                Subproperties: {prop.subproperties.join(', ')}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   const flattenClasses = (nodes) => {
     let flatList = [];
     nodes.forEach(node => {
@@ -268,28 +266,179 @@ const OntologyUpload = () => {
 
   const handleManageRelationship = async (subject, objectProperty, target, action, replaceWith = null) => {
     try {
-      const response = await axios.post('http://localhost:8000/relationship-manager/', {
-        subject,
-        object_property: objectProperty,
-        target,
-        action,
-        replace_with: replaceWith
+      const response = await axios.post('http://localhost:8000/relationship-manager/', { subject, object_property: objectProperty, target, action, replace_with: replaceWith });
+      if (response.data.status === 'success') setOntologyData(prev=>({ ...prev, individuals: response.data.ontology.individuals }));
+      setMessage(response.data.status==='success'?`✅ ${response.data.message}`:`❌ ${response.data.message}`);
+    } catch (error) { setMessage(`❌ Erro: ${error.response?.data?.message || error.message}`); }
+  };
+
+  // Updated PropertiesList
+  const PropertiesList = ({ properties, type }) => (
+    <div className="properties-container">
+      {properties?.length > 0 ? (
+        properties.map(prop => (
+          <div key={prop.name} className="property-card">
+            <h4>{prop.label || prop.name}</h4>
+            <div className="property-meta">
+              <span><strong>Nome:</strong> {prop.name}</span>
+              <span><strong>IRI:</strong> {prop.iri || '-'}</span>
+  
+              {(type === 'object' || type === 'data') && (
+                <>
+                  <span><strong>Domain:</strong> {Array.isArray(prop.domain) ? prop.domain.join(', ') : (prop.domain || 'any')}</span>
+                  <span><strong>Range:</strong> {Array.isArray(prop.range) ? prop.range.join(', ') : (prop.range || 'any')}</span>
+                </>
+              )}
+  
+              {type === 'annotation' && (
+                <span><strong>Domain:</strong> {Array.isArray(prop.domain) ? prop.domain.join(', ') : (prop.domain || 'any')}</span>
+              )}
+  
+              {typeof prop.is_functional === 'boolean' && (
+                <span><strong>Funcional:</strong> {prop.is_functional ? 'Sim' : 'Não'}</span>
+              )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <p>Nenhuma propriedade encontrada.</p>
+      )}
+    </div>
+  );  
+
+  const handleCreateObjectProperty = async () => {
+    if (!newObjPropName || !objDomain[0] || !objRange[0]) {
+      alert("Todos os campos são obrigatórios.");
+      return;
+    }
+  
+
+    // Normaliza nomes (ex: "b" → "B")
+    const normalizedDomain = objDomain[0].trim().replace(/ /g, '');
+    const normalizedRange = objRange[0].trim().replace(/ /g, '');
+  
+    try {
+      const response = await fetch('/create_object_property/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_name: newObjPropName,
+          domain: [normalizedDomain], // Array com valor normalizado
+          range: [normalizedRange]    // Array com valor normalizado
+        })
       });
   
-      if (response.data.status === 'success') {
+      const result = await response.json();
+      if (result.status === 'success') {
+        alert("Propriedade criada com sucesso!");
         setOntologyData(prev => ({
           ...prev,
-          individuals: response.data.ontology.individuals
+          object_properties: result.object_properties
         }));
-        setMessage(`✅ ${response.data.message}`);
+        setShowObjectPropertyForm(false);
+        setNewObjPropName('');
+        setObjDomain(['']);
+        setObjRange(['']);
       } else {
-        setMessage(`❌ ${response.data.message}`);
+        alert("Erro: " + result.message);
       }
     } catch (error) {
-      setMessage(`❌ Erro: ${error.response?.data?.message || error.message}`);
+      console.error("Erro ao criar propriedade:", error);
+      alert("Erro de rede ou servidor.");
     }
   };
   
+
+  const handleCreateAnnotationProperty = async () => {
+    if (!newAnnoPropName) return alert('Informe o nome da AnnotationProperty');
+    try {
+      const res = await axios.post('http://localhost:8000/create-annotation-property/', {
+        name: newAnnoPropName,
+        domain: annoDomain
+      });
+      if(res.data.status==='success'){
+        setOntologyData(prev=>({ ...prev, annotation_properties: res.data.annotation_properties }));
+        setShowCreateAnnoPropForm(false);
+        setNewAnnoPropName(''); setAnnoDomain([]);
+        setMessage(`✅ ${res.data.message}`);
+      } else alert(res.data.message);
+    } catch(e){ alert(`Erro: ${e.response?.data?.message||e.message}`); }
+  };
+
+  // Object Property Form Component
+// Object Property Form Component
+const ObjectPropertyForm = () => (
+  <div className="create-property-form" style={{ 
+    padding: '1rem',
+    margin: '1rem 0',
+    border: '1px solid #ddd',
+    borderRadius: '5px',
+    backgroundColor: '#f9f9f9'
+  }}>
+    <h3>Criar Nova Object Property</h3>
+    
+    <div className="form-group" style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem' }}>Nome da Propriedade:</label>
+      <input
+        type="text"
+        value={newObjPropName}
+        onChange={(e) => setNewObjPropName(e.target.value)}
+        placeholder="Nome da propriedade"
+        className="form-input"
+        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+      />
+    </div>
+    
+    <div className="form-group" style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem' }}>Domínio: (Escolha uma classe)</label>
+      <select
+        value={objDomain[0] || ''}
+        onChange={(e) => setObjDomain([e.target.value])}
+        className="form-select"
+        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+      >
+        <option value="">Selecione uma classe</option>
+        {flattenClasses(ontologyData.classes).map(cls => (
+          <option key={cls.name} value={cls.name}>{cls.name}</option>
+        ))}
+      </select>
+      <small style={{ color: '#666', fontSize: '0.8rem' }}>O backend aceita apenas uma classe de domínio.</small>
+    </div>
+    
+    <div className="form-group" style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem' }}>Range: (Escolha uma classe)</label>
+      <select
+        value={objRange[0] || ''}
+        onChange={(e) => setObjRange([e.target.value])}
+        className="form-select"
+        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+      >
+        <option value="">Selecione uma classe</option>
+        {flattenClasses(ontologyData.classes).map(cls => (
+          <option key={cls.name} value={cls.name}>{cls.name}</option>
+        ))}
+      </select>
+      <small style={{ color: '#666', fontSize: '0.8rem' }}>O backend aceita apenas uma classe de range.</small>
+    </div>
+    
+    <div className="form-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+      <button 
+        onClick={handleCreateObjectProperty} 
+        className="submit-btn"
+        style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+      >
+        Criar Propriedade
+      </button>
+      <button 
+        onClick={() => setShowObjectPropertyForm(false)} 
+        className="cancel-btn"
+        style={{ padding: '8px 16px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+);
 
   return (
     <div className="ontology-upload">
@@ -340,7 +489,7 @@ const OntologyUpload = () => {
               className={`tab-btn ${activeTab === 'object_properties' ? 'active' : ''}`}
               onClick={() => setActiveTab('object_properties')}
             >
-              <FiList /> Object Properties ({ontologyData.object_properties.length})
+              <FiList /> Object Properties ({ontologyData.object_properties ? ontologyData.object_properties.length : 0})
             </button>
             <button
               className={`tab-btn ${activeTab === 'data_properties' ? 'active' : ''}`}
@@ -417,7 +566,13 @@ const OntologyUpload = () => {
                   <h3>Indivíduos Existentes</h3>
                   <button
                     className="create-individual-btn"
-                    onClick={() => setShowCreateIndividualForm(!showCreateIndividualForm)}
+                    onClick={() => {
+                      setNewIndividualName('');
+                      setSelectedIndividualClasses([]);
+                      setIndividualProperties([]);
+                      setIndividualAnnotations([]);
+                      setShowCreateIndividualForm(true);
+                    }}
                   >
                     + Novo Indivíduo
                   </button>
@@ -494,6 +649,45 @@ const OntologyUpload = () => {
                       </button>
                     </div>
   
+                      {/* -- Nova seção de Annotations -- */}
+                      <div className="annotations-inputs">
+                        <h5>Anotações</h5>
+                        {individualAnnotations.map((anno, idx) => (
+                          <div key={idx} className="annotation-row">
+                            <select
+                              value={anno.name}
+                              onChange={e => {
+                                const a = [...individualAnnotations];
+                                a[idx].name = e.target.value;
+                                setIndividualAnnotations(a);
+                              }}
+                            >
+                              <option value="">Selecione uma AnnotationProperty</option>
+                              {ontologyData.annotation_properties.map(p => (
+                                <option key={p.name} value={p.name}>{p.name}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              placeholder="Valor da anotação"
+                              value={anno.value}
+                              onChange={e => {
+                                const a = [...individualAnnotations];
+                                a[idx].value = e.target.value;
+                                setIndividualAnnotations(a);
+                              }}
+                            />
+                            <button onClick={() => {
+                              setIndividualAnnotations(individualAnnotations.filter((_,i) => i!==idx));
+                            }}>×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => setIndividualAnnotations([...individualAnnotations, { name:'', value:'' }])}>
+                          + Adicionar Anotação
+                        </button>
+                      </div>
+
+
                     <div className="form-actions">
                       <button className="submit-btn" onClick={handleCreateIndividual}>Criar</button>
                       <button className="cancel-btn" onClick={() => setShowCreateIndividualForm(false)}>Cancelar</button>
@@ -583,11 +777,32 @@ const OntologyUpload = () => {
             </div>
   
             {activeTab === 'object_properties' && (
-              <>
+              <div className="object-properties-section">
+                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3>Object Properties</h3>
+                  <button
+                    className="create-property-btn"
+                    style={{ 
+                      padding: '8px 16px', 
+                      backgroundColor: '#4CAF50', 
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setShowObjectPropertyForm(!showObjectPropertyForm)}
+                  >
+                    + Nova Object Property
+                  </button>
+                </div>
+                
+                {showObjectPropertyForm && <ObjectPropertyForm />}
+                
                 <PropertiesList
                   properties={ontologyData.object_properties}
                   type="object"
                 />
+
                 <div className="relationship-form">
                   <h4>Gerenciar Relacionamento</h4>
                   <select id="rel-subject">
@@ -595,43 +810,76 @@ const OntologyUpload = () => {
                       <option key={ind.name} value={ind.name}>{ind.name}</option>
                     ))}
                   </select>
+
                   <select id="rel-property">
-                    {ontologyData.object_properties.map(prop => (
+                  {ontologyData.object_properties && Array.isArray(ontologyData.object_properties) && ontologyData.object_properties.map(prop => (
                       <option key={prop.name} value={prop.name}>{prop.name}</option>
                     ))}
                   </select>
+
                   <select id="rel-target">
                     {ontologyData.individuals.map(ind => (
                       <option key={ind.name} value={ind.name}>{ind.name}</option>
                     ))}
                   </select>
+
                   <select id="rel-action">
                     <option value="add">Adicionar</option>
                     <option value="remove">Remover</option>
                     <option value="replace">Substituir</option>
                   </select>
-                  <input id="rel-replace-with" type="text" placeholder="Novo alvo (para substituir)" />
+
+                  <input
+                    id="rel-replace-with"
+                    type="text"
+                    placeholder="Novo alvo (para substituir)"
+                  />
+
                   <button
                     onClick={() => {
                       const subject = document.getElementById('rel-subject').value;
                       const prop = document.getElementById('rel-property').value;
                       const target = document.getElementById('rel-target').value;
                       const action = document.getElementById('rel-action').value;
-                      const replaceWith = document.getElementById('rel-replace-with').value || null;
-                      handleManageRelationship(subject, prop, target, action, replaceWith);
+                      const replaceWith =
+                        document.getElementById('rel-replace-with').value || null;
+                      handleManageRelationship(
+                        subject,
+                        prop,
+                        target,
+                        action,
+                        replaceWith
+                      );
                     }}
                   >
                     Executar
                   </button>
                 </div>
-                </>
+
+                <div className="section-header" style={{ marginTop: '2rem' }}>
+                  <h3>Data Properties</h3>
+                </div>
+                <PropertiesList
+                  properties={ontologyData.data_properties}
+                  type="data"
+                />
+              </div>
             )}
 
-            {activeTab === 'data_properties' && (
-              <PropertiesList
-                properties={ontologyData.data_properties}
-                type="data"
-              />
+
+            {activeTab==='annotation_properties' && (
+              <>
+                <button onClick={()=>setShowCreateAnnoPropForm(!showCreateAnnoPropForm)}>+ Nova AnnotationProperty</button>
+                {showCreateAnnoPropForm && (
+                  <div className="create-prop-form">
+                    <input placeholder="Nome" value={newAnnoPropName} onChange={e=>setNewAnnoPropName(e.target.value)} />
+                    <select multiple value={annoDomain} onChange={e=>setAnnoDomain(Array.from(e.target.selectedOptions,opt=>opt.value))}>
+                      {flattenClasses(ontologyData.classes).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <button onClick={handleCreateAnnotationProperty}>Criar</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
