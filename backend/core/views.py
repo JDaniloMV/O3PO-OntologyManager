@@ -586,3 +586,89 @@ def create_object_property_view(request):
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+import json
+import datetime
+import traceback
+import types
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from owlready2 import get_ontology, DataProperty, FunctionalProperty, And, normstr, locstr
+
+@csrf_exempt
+def create_data_property_view(request):
+    global onto, onto_path
+
+    # Carrega ontologia se ainda não estiver em memória
+    if onto is None and onto_path:
+        onto = get_ontology(onto_path).load()
+
+    if onto is None:
+        return JsonResponse({'status': 'error', 'message': 'Nenhuma ontologia carregada'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+        name = data.get('property_name')
+        domain_names = data.get('domain', [])
+        data_type_str = data.get('range')  # ex: "str", "int", "xsd:float", etc.
+        characteristics = data.get('characteristics', [])
+
+        if not name:
+            return JsonResponse({'status': 'error', 'message': 'Nome é obrigatório'}, status=400)
+        if not data_type_str:
+            return JsonResponse({'status': 'error', 'message': 'Tipo de dado (range) é obrigatório'}, status=400)
+
+        # Mapeamento dos tipos de dados para OwlReady2 (tipos Python nativos)
+        type_map = {
+            'str': str,
+            'normstr': normstr,
+            'locstr': locstr,
+            'int': int,
+            'float': float,
+            'bool': bool,
+            'date': datetime.date,
+            'time': datetime.time,
+            'datetime': datetime.datetime,
+        }
+
+        # Normaliza chave, removendo prefixo xsd: se presente
+        key = data_type_str.lower()
+        if key.startswith('xsd:'):
+            key = key.split(':', 1)[1]
+
+        data_type = type_map.get(key)
+        if data_type is None:
+            return JsonResponse({'status': 'error', 'message': f'Tipo de dado "{data_type_str}" não suportado'}, status=400)
+
+        # Busca por classes de domínio
+        domains = []
+        for domain_name in domain_names:
+            cls = onto.search_one(iri=f"*{domain_name}") or onto.search_one(label=domain_name)
+            if not cls:
+                return JsonResponse({'status': 'error', 'message': f'Domínio "{domain_name}" não encontrado'}, status=400)
+            domains.append(cls)
+
+        with onto:
+            # Criação da nova propriedade usando types.new_class
+            NewDataProp = types.new_class(name, (DataProperty,))
+            NewDataProp.namespace = onto
+
+            # Define domínio
+            if domains:
+                NewDataProp.domain = domains if len(domains) == 1 else [And(domains)]
+
+            # Define range como tipo primitivo
+            NewDataProp.range = [data_type]
+
+            # Define características (functional)
+            if any(c.lower() == 'functional' for c in characteristics):
+                NewDataProp.is_a.append(FunctionalProperty)
+
+            # Salva a ontologia atualizada
+            onto.save(file=onto_path, format='rdfxml')
+
+        return JsonResponse({'status': 'success', 'message': 'Propriedade de dados criada com sucesso'})
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
