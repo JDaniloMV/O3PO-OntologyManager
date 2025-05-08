@@ -36,6 +36,13 @@ const OntologyUpload = () => {
   // New state for object property form
   const [showObjectPropertyForm, setShowObjectPropertyForm] = useState(false);
 
+  // States for DataProperty form
+  const [showDataPropForm, setShowDataPropForm] = useState(false);
+  const [newDataPropName, setNewDataPropName] = useState('');
+  const [dataDomain, setDataDomain] = useState([]);
+  const [dataRangeType, setDataRangeType] = useState('');
+  const [dataCharacteristics, setDataCharacteristics] = useState([]);
+
   const handleExportOntology = () => {
     if (!ontologyData) {
       setMessage('❌ Nenhuma ontologia carregada!');
@@ -349,6 +356,44 @@ const OntologyUpload = () => {
   };
   
 
+  const handleCreateDataProperty = async () => {
+    if (!newDataPropName || !dataRangeType) {
+      alert('Nome e tipo de dado são obrigatórios.');
+      return;
+    }
+    try {
+      const payload = {
+        property_name: newDataPropName.trim(),
+        domain: dataDomain,
+        range: dataRangeType,
+        characteristics: dataCharacteristics
+      };
+      const response = await axios.post(
+        '/create_data_property/',   
+        payload,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      if (response.data.status === 'success') {
+        setOntologyData(prev => ({
+          ...prev,
+          data_properties: response.data.data_properties
+        }));
+        setShowDataPropForm(false);
+        setNewDataPropName('');
+        setDataDomain([]);
+        setDataRangeType('');
+        setDataCharacteristics([]);
+        setMessage(`✅ ${response.data.message}`);
+      } else {
+        alert('Erro: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao criar DataProperty: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+
   const handleCreateAnnotationProperty = async () => {
     if (!newAnnoPropName) return alert('Informe o nome da AnnotationProperty');
     try {
@@ -440,165 +485,166 @@ const ObjectPropertyForm = () => (
   </div>
 );
 
-  return (
-    <div className="ontology-upload">
-      <div className="upload-form">
-        <h2>Ontology Loader</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="file-input-wrapper">
-            <input
-              type="file"
-              accept=".owl"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="file-input"
-              id="ontology-file"
-            />
-            <label htmlFor="ontology-file" className="upload-button">
-              <FiUpload style={{ marginRight: '8px' }} />
-              {file ? file.name : 'Choose OWL File'}
-            </label>
-          </div>
-          <button type="submit" className="upload-button">
-            Load Ontology
+
+return (
+  <div className="ontology-upload">
+    <div className="upload-form">
+      <h2>Ontology Loader</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="file-input-wrapper">
+          <input
+            type="file"
+            accept=".owl"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="file-input"
+            id="ontology-file"
+          />
+          <label htmlFor="ontology-file" className="upload-button">
+            <FiUpload style={{ marginRight: '8px' }} />
+            {file ? file.name : 'Choose OWL File'}
+          </label>
+        </div>
+        <button type="submit" className="upload-button">
+          Load Ontology
+        </button>
+      </form>
+
+      {message && (
+        <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
+          {message}
+        </div>
+      )}
+    </div>
+
+    {ontologyData && (
+      <div className="ontology-view">
+        <div className="ontology-tabs">
+          <button
+            className={`tab-btn ${activeTab === 'classes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('classes')}
+          >
+            <FiGrid /> Classes ({ontologyData.classes_count})
           </button>
-        </form>
-  
-        {message && (
-          <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
-            {message}
-          </div>
-        )}
-      </div>
-  
-      {ontologyData && (
-        <div className="ontology-view">
-          <div className="ontology-tabs">
-            <button
-              className={`tab-btn ${activeTab === 'classes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('classes')}
-            >
-              <FiGrid /> Classes ({ontologyData.classes_count})
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'individuals' ? 'active' : ''}`}
-              onClick={() => setActiveTab('individuals')}
-            >
-              <FiUser /> Indivíduos ({ontologyData.individuals.length})
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'object_properties' ? 'active' : ''}`}
-              onClick={() => setActiveTab('object_properties')}
-            >
-              <FiList /> Object Properties ({ontologyData.object_properties ? ontologyData.object_properties.length : 0})
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'data_properties' ? 'active' : ''}`}
-              onClick={() => setActiveTab('data_properties')}
-            >
-              <FiTag /> Data Properties ({ontologyData.data_properties.length})
-            </button>
-          </div>
-  
-          <div className="tab-content">
-            {activeTab === 'classes' && (
-              <div className="ontology-tree">
-                <div className="search-box">
-                  <FiSearch className="search-icon" />
+          <button
+            className={`tab-btn ${activeTab === 'individuals' ? 'active' : ''}`}
+            onClick={() => setActiveTab('individuals')}
+          >
+            <FiUser /> Indivíduos ({ontologyData.individuals.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'object_properties' ? 'active' : ''}`}
+            onClick={() => setActiveTab('object_properties')}
+          >
+            <FiList /> Object Properties ({ontologyData.object_properties ? ontologyData.object_properties.length : 0})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'data_properties' ? 'active' : ''}`}
+            onClick={() => setActiveTab('data_properties')}
+          >
+            <FiTag /> Data Properties ({ontologyData.data_properties.length})
+          </button>
+        </div>
+
+        <div className="tab-content">
+          {activeTab === 'classes' && (
+            <div className="ontology-tree">
+              <div className="search-box">
+                <FiSearch className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search classes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+              <h3>Class Hierarchy</h3>
+              <div className="create-class-actions">
+                <button
+                  className="create-class-btn"
+                  onClick={() => setShowCreateClassForm(!showCreateClassForm)}
+                >
+                  + Nova Classe
+                </button>
+              </div>
+
+              {showCreateClassForm && (
+                <div className="create-class-form">
                   <input
                     type="text"
-                    placeholder="Search classes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="search-input"
+                    placeholder="Nome da nova classe"
+                    value={newClassName}
+                    onChange={(e) => setNewClassName(e.target.value)}
+                    className="class-input"
                   />
-                </div>
-                <h3>Class Hierarchy</h3>
-                <div className="create-class-actions">
-                  <button
-                    className="create-class-btn"
-                    onClick={() => setShowCreateClassForm(!showCreateClassForm)}
-                  >
-                    + Nova Classe
-                  </button>
-                </div>
-  
-                {showCreateClassForm && (
-                  <div className="create-class-form">
-                    <input
-                      type="text"
-                      placeholder="Nome da nova classe"
-                      value={newClassName}
-                      onChange={(e) => setNewClassName(e.target.value)}
-                      className="class-input"
-                    />
-                    <select
-                      multiple
-                      value={selectedParents}
-                      onChange={(e) => {
-                        const options = Array.from(e.target.selectedOptions, option => option.value);
-                        setSelectedParents(options);
-                      }}
-                      className="class-select"
-                    >
-                      {flattenClasses(ontologyData.classes).map(cls => (
-                        <option key={cls.name} value={cls.name}>{cls.name}</option>
-                      ))}
-                    </select>
-  
-                    <div className="form-actions">
-                      <button onClick={handleCreateClass} className="submit-btn">Criar</button>
-                      <button onClick={() => setShowCreateClassForm(false)} className="cancel-btn">Cancelar</button>
-                    </div>
-                  </div>
-                )}
-  
-                <ul>
-                  {(filteredHierarchy || ontologyData.classes).map(root => (
-                    renderNode(root)
-                  ))}
-                </ul>
-              </div>
-            )}
-  
-            {activeTab === 'individuals' && (
-              <div className="individuals-section">
-                <div className="section-header">
-                  <h3>Indivíduos Existentes</h3>
-                  <button
-                    className="create-individual-btn"
-                    onClick={() => {
-                      setNewIndividualName('');
-                      setSelectedIndividualClasses([]);
-                      setIndividualProperties([]);
-                      setIndividualAnnotations([]);
-                      setShowCreateIndividualForm(true);
+                  <select
+                    multiple
+                    value={selectedParents}
+                    onChange={(e) => {
+                      const options = Array.from(e.target.selectedOptions, option => option.value);
+                      setSelectedParents(options);
                     }}
+                    className="class-select"
                   >
-                    + Novo Indivíduo
-                  </button>
+                    {flattenClasses(ontologyData.classes).map(cls => (
+                      <option key={cls.name} value={cls.name}>{cls.name}</option>
+                    ))}
+                  </select>
+
+                  <div className="form-actions">
+                    <button onClick={handleCreateClass} className="submit-btn">Criar</button>
+                    <button onClick={() => setShowCreateClassForm(false)} className="cancel-btn">Cancelar</button>
+                  </div>
                 </div>
-  
-                {showCreateIndividualForm && (
-                  <div className="create-individual-form">
-                    <input
-                      type="text"
-                      placeholder="Nome do indivíduo"
-                      value={newIndividualName}
-                      onChange={(e) => setNewIndividualName(e.target.value)}
-                    />
-                    <select
-                      multiple
-                      value={selectedIndividualClasses}
-                      onChange={(e) => setSelectedIndividualClasses(Array.from(e.target.selectedOptions, opt => opt.value))}
-                    >
-                      {flattenClasses(ontologyData.classes).map(cls => (
-                        <option key={cls.name} value={cls.name}>{cls.name}</option>
-                      ))}
-                    </select>
-  
-                    <div className="properties-inputs">
-                      {individualProperties.map((prop, index) => (
-                        <div key={index} className="property-row">
+              )}
+
+              <ul>
+                {(filteredHierarchy || ontologyData.classes).map(root => (
+                  renderNode(root)
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {activeTab === 'individuals' && (
+            <div className="individuals-section">
+              <div className="section-header">
+                <h3>Indivíduos Existentes</h3>
+                <button
+                  className="create-individual-btn"
+                  onClick={() => {
+                    setNewIndividualName('');
+                    setSelectedIndividualClasses([]);
+                    setIndividualProperties([]);
+                    setIndividualAnnotations([]);
+                    setShowCreateIndividualForm(true);
+                  }}
+                >
+                  + Novo Indivíduo
+                </button>
+              </div>
+
+              {showCreateIndividualForm && (
+                <div className="create-individual-form">
+                  <input
+                    type="text"
+                    placeholder="Nome do indivíduo"
+                    value={newIndividualName}
+                    onChange={(e) => setNewIndividualName(e.target.value)}
+                  />
+                  <select
+                    multiple
+                    value={selectedIndividualClasses}
+                    onChange={(e) => setSelectedIndividualClasses(Array.from(e.target.selectedOptions, opt => opt.value))}
+                  >
+                    {flattenClasses(ontologyData.classes).map(cls => (
+                      <option key={cls.name} value={cls.name}>{cls.name}</option>
+                    ))}
+                  </select>
+
+                  <div className="properties-inputs">
+                    {individualProperties.map((prop, index) => (
+                      <div key={index} className="property-row">
                         <select
                           value={prop.name}
                           onChange={(e) => handlePropertyChange(index, 'name', e.target.value)}
@@ -614,14 +660,12 @@ const ObjectPropertyForm = () => (
                           value={prop.value}
                           onChange={(e) => handlePropertyChange(index, 'value', e.target.value)}
                         />
-
                         <input
                           type="text"
                           placeholder="Language tag (opcional)"
                           value={prop.lang}
                           onChange={(e) => handlePropertyChange(index, 'lang', e.target.value)}
                         />
-
                         <select
                           value={prop.datatype}
                           onChange={(e) => handlePropertyChange(index, 'datatype', e.target.value)}
@@ -632,260 +676,285 @@ const ObjectPropertyForm = () => (
                             <option key={dt} value={dt}>{dt}</option>
                           ))}
                         </select>
-  
-                          <button
-                            className="remove-property-btn"
-                            onClick={() => removeProperty(index)}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        className="add-property-btn"
-                        onClick={() => setIndividualProperties([...individualProperties, { name: '', values: '' }])}
-                      >
-                        + Adicionar Propriedade
-                      </button>
-                    </div>
-  
-                      {/* -- Nova seção de Annotations -- */}
-                      <div className="annotations-inputs">
-                        <h5>Anotações</h5>
-                        {individualAnnotations.map((anno, idx) => (
-                          <div key={idx} className="annotation-row">
-                            <select
-                              value={anno.name}
-                              onChange={e => {
-                                const a = [...individualAnnotations];
-                                a[idx].name = e.target.value;
-                                setIndividualAnnotations(a);
-                              }}
-                            >
-                              <option value="">Selecione uma AnnotationProperty</option>
-                              {ontologyData.annotation_properties.map(p => (
-                                <option key={p.name} value={p.name}>{p.name}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="Valor da anotação"
-                              value={anno.value}
-                              onChange={e => {
-                                const a = [...individualAnnotations];
-                                a[idx].value = e.target.value;
-                                setIndividualAnnotations(a);
-                              }}
-                            />
-                            <button onClick={() => {
-                              setIndividualAnnotations(individualAnnotations.filter((_,i) => i!==idx));
-                            }}>×</button>
-                          </div>
-                        ))}
-                        <button onClick={() => setIndividualAnnotations([...individualAnnotations, { name:'', value:'' }])}>
-                          + Adicionar Anotação
+                        <button
+                          className="remove-property-btn"
+                          onClick={() => removeProperty(index)}
+                        >
+                          ×
                         </button>
                       </div>
-
-
-                    <div className="form-actions">
-                      <button className="submit-btn" onClick={handleCreateIndividual}>Criar</button>
-                      <button className="cancel-btn" onClick={() => setShowCreateIndividualForm(false)}>Cancelar</button>
-                    </div>
+                    ))}
+                    <button
+                      className="add-property-btn"
+                      onClick={() => setIndividualProperties([...individualProperties, { name: '', values: '' }])}
+                    >
+                      + Adicionar Propriedade
+                    </button>
                   </div>
-                )}
-  
-                {/* Atualizado: Lista de Indivíduos */}
-                <div className="individuals-list">
-                  {ontologyData.individuals.map(ind => (
-                    <div key={ind.name} className="individual-card">
-                      <h4 className="text-lg font-bold mb-2">{ind.name}</h4>
-  
-                      {ind.type && ind.type.length > 0 && (
-                        <p><strong>Tipo(s):</strong> {ind.type.join(', ')}</p>
-                      )}
-  
-                      {ind.properties && Object.keys(ind.properties).length > 0 && (
-                        <div className="mt-2">
-                          <h5 className="font-semibold">Propriedades:</h5>
-                          {Object.entries(ind.properties).map(([prop, values]) => (
-                            <div key={prop} className="property">
-                              <span className="prop-name">{prop}:</span> {values.join(', ')}
-                            </div>
+
+                  <div className="annotations-inputs">
+                    <h5>Anotações</h5>
+                    {individualAnnotations.map((anno, idx) => (
+                      <div key={idx} className="annotation-row">
+                        <select
+                          value={anno.name}
+                          onChange={e => {
+                            const a = [...individualAnnotations];
+                            a[idx].name = e.target.value;
+                            setIndividualAnnotations(a);
+                          }}
+                        >
+                          <option value="">Selecione uma AnnotationProperty</option>
+                          {ontologyData.annotation_properties.map(p => (
+                            <option key={p.name} value={p.name}>{p.name}</option>
                           ))}
-                        </div>
-                      )}
-  
-                      {ind.annotations && Object.keys(ind.annotations).length > 0 && (
-                        <div className="mt-2">
-                          <h5 className="font-semibold">Anotações:</h5>
-                          {Object.entries(ind.annotations).map(([anno, values]) => (
-                            <div key={anno} className="annotation">
-                              <span className="annotation-name">{anno}:</span> {values.join(', ')}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-  
-                      {ind.description && ind.description.types && ind.description.types.length > 0 && (
-                        <div className="mt-2">
-                          <h5 className="font-semibold">Descrição (Tipos adicionais):</h5>
-                          {ind.description.types.map((descType, idx) => (
-                            <div key={idx}>{descType}</div>
-                          ))}
-                        </div>
-                      )}
-  
-                      {ind.same_as && ind.same_as.length > 0 && (
-                        <div className="mt-2">
-                          <h5 className="font-semibold">Mesmo que:</h5>
-                          {ind.same_as.map((same, idx) => (
-                            <div key={idx}>{same}</div>
-                          ))}
-                        </div>
-                      )}
-  
-                      {ind.different_from && ind.different_from.length > 0 && (
-                        <div className="mt-2">
-                          <h5 className="font-semibold">Diferente de:</h5>
-                          {ind.different_from.map((diff, idx) => (
-                            <div key={idx}>{diff}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Valor da anotação"
+                          value={anno.value}
+                          onChange={e => {
+                            const a = [...individualAnnotations];
+                            a[idx].value = e.target.value;
+                            setIndividualAnnotations(a);
+                          }}
+                        />
+                        <button onClick={() => {
+                          setIndividualAnnotations(individualAnnotations.filter((_,i) => i!==idx));
+                        }}>×</button>
+                      </div>
+                    ))}
+                    <button onClick={() => setIndividualAnnotations([...individualAnnotations, { name:'', value:'' }])}>
+                      + Adicionar Anotação
+                    </button>
+                  </div>
+
+                  <div className="form-actions">
+                    <button className="submit-btn" onClick={handleCreateIndividual}>Criar</button>
+                    <button className="cancel-btn" onClick={() => setShowCreateIndividualForm(false)}>Cancelar</button>
+                  </div>
                 </div>
+              )}
+
+              <div className="individuals-list">
+                {ontologyData.individuals.map(ind => (
+                  <div key={ind.name} className="individual-card">
+                    <h4 className="text-lg font-bold mb-2">{ind.name}</h4>
+                    {ind.type && ind.type.length > 0 && (
+                      <p><strong>Tipo(s):</strong> {ind.type.join(', ')}</p>
+                    )}
+                    {ind.properties && Object.keys(ind.properties).length > 0 && (
+                      <div className="mt-2">
+                        <h5 className="font-semibold">Propriedades:</h5>
+                        {Object.entries(ind.properties).map(([prop, values]) => (
+                          <div key={prop} className="property">
+                            <span className="prop-name">{prop}:</span> {values.join(', ')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {ind.annotations && Object.keys(ind.annotations).length > 0 && (
+                      <div className="mt-2">
+                        <h5 className="font-semibold">Anotações:</h5>
+                        {Object.entries(ind.annotations).map(([anno, values]) => (
+                          <div key={anno} className="annotation">
+                            <span className="annotation-name">{anno}:</span> {values.join(', ')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {ind.description && ind.description.types && ind.description.types.length > 0 && (
+                      <div className="mt-2">
+                        <h5 className="font-semibold">Descrição (Tipos adicionais):</h5>
+                        {ind.description.types.map((descType, idx) => (
+                          <div key={idx}>{descType}</div>
+                        ))}
+                      </div>
+                    )}
+                    {ind.same_as && ind.same_as.length > 0 && (
+                      <div className="mt-2">
+                        <h5 className="font-semibold">Mesmo que:</h5>
+                        {ind.same_as.map((same, idx) => (
+                          <div key={idx}>{same}</div>
+                        ))}
+                      </div>
+                    )}
+                    {ind.different_from && ind.different_from.length > 0 && (
+                      <div className="mt-2">
+                        <h5 className="font-semibold">Diferente de:</h5>
+                        {ind.different_from.map((diff, idx) => (
+                          <div key={idx}>{diff}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
-  
-            {/* Exportação */}
-            <div className="export-section">
-              <input
-                type="text"
-                value={exportFileName}
-                onChange={(e) => setExportFileName(e.target.value)}
-                className="export-input"
-                placeholder="Nome do arquivo .owl"
-              />
-              <button
-                className="export-button"
-                onClick={handleExportOntology}
-              >
-                Exportar Ontologia
-              </button>
             </div>
-  
-            {activeTab === 'object_properties' && (
-              <div className="object-properties-section">
-                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3>Object Properties</h3>
-                  <button
-                    className="create-property-btn"
-                    style={{ 
-                      padding: '8px 16px', 
-                      backgroundColor: '#4CAF50', 
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setShowObjectPropertyForm(!showObjectPropertyForm)}
-                  >
-                    + Nova Object Property
-                  </button>
-                </div>
-                
-                {showObjectPropertyForm && <ObjectPropertyForm />}
-                
-                <PropertiesList
-                  properties={ontologyData.object_properties}
-                  type="object"
-                />
+          )}
 
-                <div className="relationship-form">
-                  <h4>Gerenciar Relacionamento</h4>
-                  <select id="rel-subject">
-                    {ontologyData.individuals.map(ind => (
-                      <option key={ind.name} value={ind.name}>{ind.name}</option>
-                    ))}
-                  </select>
-
-                  <select id="rel-property">
-                  {ontologyData.object_properties && Array.isArray(ontologyData.object_properties) && ontologyData.object_properties.map(prop => (
-                      <option key={prop.name} value={prop.name}>{prop.name}</option>
-                    ))}
-                  </select>
-
-                  <select id="rel-target">
-                    {ontologyData.individuals.map(ind => (
-                      <option key={ind.name} value={ind.name}>{ind.name}</option>
-                    ))}
-                  </select>
-
-                  <select id="rel-action">
-                    <option value="add">Adicionar</option>
-                    <option value="remove">Remover</option>
-                    <option value="replace">Substituir</option>
-                  </select>
-
-                  <input
-                    id="rel-replace-with"
-                    type="text"
-                    placeholder="Novo alvo (para substituir)"
-                  />
-
-                  <button
-                    onClick={() => {
-                      const subject = document.getElementById('rel-subject').value;
-                      const prop = document.getElementById('rel-property').value;
-                      const target = document.getElementById('rel-target').value;
-                      const action = document.getElementById('rel-action').value;
-                      const replaceWith =
-                        document.getElementById('rel-replace-with').value || null;
-                      handleManageRelationship(
-                        subject,
-                        prop,
-                        target,
-                        action,
-                        replaceWith
-                      );
-                    }}
-                  >
-                    Executar
-                  </button>
-                </div>
-
-                <div className="section-header" style={{ marginTop: '2rem' }}>
-                  <h3>Data Properties</h3>
-                </div>
-                <PropertiesList
-                  properties={ontologyData.data_properties}
-                  type="data"
-                />
+          {activeTab === 'object_properties' && (
+            <div className="object-properties-section">
+              <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3>Object Properties</h3>
+                <button
+                  className="create-property-btn"
+                  style={{ 
+                    padding: '8px 16px', 
+                    backgroundColor: '#4CAF50', 
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setShowObjectPropertyForm(!showObjectPropertyForm)}
+                >
+                  + Nova Object Property
+                </button>
               </div>
-            )}
+              
+              {showObjectPropertyForm && <ObjectPropertyForm />}
+              
+              <PropertiesList
+                properties={ontologyData.object_properties}
+                type="object"
+              />
 
+              <div className="relationship-form">
+                <h4>Gerenciar Relacionamento</h4>
+                <select id="rel-subject">
+                  {ontologyData.individuals.map(ind => (
+                    <option key={ind.name} value={ind.name}>{ind.name}</option>
+                  ))}
+                </select>
+                <select id="rel-property">
+                  {ontologyData.object_properties && Array.isArray(ontologyData.object_properties) && ontologyData.object_properties.map(prop => (
+                    <option key={prop.name} value={prop.name}>{prop.name}</option>
+                  ))}
+                </select>
+                <select id="rel-target">
+                  {ontologyData.individuals.map(ind => (
+                    <option key={ind.name} value={ind.name}>{ind.name}</option>
+                  ))}
+                </select>
+                <select id="rel-action">
+                  <option value="add">Adicionar</option>
+                  <option value="remove">Remover</option>
+                  <option value="replace">Substituir</option>
+                </select>
+                <input
+                  id="rel-replace-with"
+                  type="text"
+                  placeholder="Novo alvo (para substituir)"
+                />
+                <button
+                  onClick={() => {
+                    const subject = document.getElementById('rel-subject').value;
+                    const prop = document.getElementById('rel-property').value;
+                    const target = document.getElementById('rel-target').value;
+                    const action = document.getElementById('rel-action').value;
+                    const replaceWith =
+                      document.getElementById('rel-replace-with').value || null;
+                    handleManageRelationship(
+                      subject,
+                      prop,
+                      target,
+                      action,
+                      replaceWith
+                    );
+                  }}
+                >
+                  Executar
+                </button>
+              </div>
+            </div>
+          )}
 
-            {activeTab==='annotation_properties' && (
-              <>
-                <button onClick={()=>setShowCreateAnnoPropForm(!showCreateAnnoPropForm)}>+ Nova AnnotationProperty</button>
-                {showCreateAnnoPropForm && (
-                  <div className="create-prop-form">
-                    <input placeholder="Nome" value={newAnnoPropName} onChange={e=>setNewAnnoPropName(e.target.value)} />
-                    <select multiple value={annoDomain} onChange={e=>setAnnoDomain(Array.from(e.target.selectedOptions,opt=>opt.value))}>
-                      {flattenClasses(ontologyData.classes).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <button onClick={handleCreateAnnotationProperty}>Criar</button>
+          {activeTab === 'data_properties' && (
+            <div className="data-properties-section">
+              <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3>Data Properties</h3>
+                <button 
+                  onClick={() => setShowDataPropForm(!showDataPropForm)} 
+                  style={{ 
+                    padding: '8px 16px', 
+                    backgroundColor: '#4CAF50', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  + Nova Data Property
+                </button>
+              </div>
+
+              {showDataPropForm && (
+                <div className="create-prop-form">
+                  <input 
+                    placeholder="Nome da DataProperty" 
+                    value={newDataPropName} 
+                    onChange={e => setNewDataPropName(e.target.value)} 
+                  />
+                  <label>Domínio (classes):</label>
+                  <select 
+                    multiple 
+                    value={dataDomain} 
+                    onChange={e => setDataDomain(Array.from(e.target.selectedOptions, opt => opt.value))}
+                  >
+                    {flattenClasses(ontologyData.classes).map(c => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                  <label>Range (tipo de dado):</label>
+                  <select 
+                    value={dataRangeType} 
+                    onChange={e => setDataRangeType(e.target.value)}
+                  >
+                    <option value="">Selecione tipo</option>
+                    {ontologyData.datatypes.map(dt => (
+                      <option key={dt} value={dt}>{dt}</option>
+                    ))}
+                  </select>
+                  <label>Características:</label>
+                  <select
+                    multiple
+                    value={dataCharacteristics}
+                    onChange={e => setDataCharacteristics(Array.from(e.target.selectedOptions, opt => opt.value))}
+                  >
+                    <option value="functional">Functional</option>
+                  </select>
+                  <div style={{ marginTop: '8px' }}>
+                    <button onClick={handleCreateDataProperty}>Criar</button>
+                    <button onClick={() => setShowDataPropForm(false)}>Cancelar</button>
                   </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
+
+              <PropertiesList properties={ontologyData.data_properties} type="data" />
+            </div>
+          )}
+
+          <div className="export-section">
+            <input
+              type="text"
+              value={exportFileName}
+              onChange={(e) => setExportFileName(e.target.value)}
+              className="export-input"
+              placeholder="Nome do arquivo .owl"
+            />
+            <button
+              className="export-button"
+              onClick={handleExportOntology}
+            >
+              Exportar Ontologia
+            </button>
           </div>
         </div>
-      )}
-    </div>
-  );  
+      </div>
+    )}
+  </div>
+ );
 }
   
-  export default OntologyUpload;
+export default OntologyUpload;
